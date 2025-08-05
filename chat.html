@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat Segreta</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #121212; color: #fff; display: flex; flex-direction: column; height: 100vh; }
+    #login, #chat { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; }
+    #login input, #login button { margin: 5px; padding: 10px; font-size: 16px; border-radius: 5px; border: none; }
+    #login button { background: #00aaff; color: white; cursor: pointer; }
+    #login button:hover { background: #0088cc; }
+    #messages { flex: 1; overflow-y: auto; width: 100%; padding: 10px; box-sizing: border-box; }
+    .msg { margin: 5px 0; padding: 10px; border-radius: 8px; background: #1f1f1f; }
+    .msg .meta { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+    .msg .text { font-size: 16px; }
+    #chatInputArea { display: flex; padding: 10px; box-sizing: border-box; }
+    #messageInput { flex: 1; padding: 10px; border-radius: 5px; border: none; }
+    #sendBtn { background: #00aaff; color: white; border: none; border-radius: 5px; padding: 10px; margin-left: 5px; cursor: pointer; }
+    #sendBtn:hover { background: #0088cc; }
+  </style>
+</head>
+<body>
+  <div id="login" style="display:flex;">
+    <h2>Login Chat</h2>
+    <input type="text" id="name" placeholder="Il tuo nome">
+    <input type="password" id="code" placeholder="Codice segreto">
+    <button onclick="enterChat()">Entra</button>
+    <p id="error" style="color:red;"></p>
+  </div>
+
+  <div id="chat">
+    <h2>Chat Segreta</h2>
+    <div id="messages"></div>
+    <div id="chatInputArea">
+      <input type="text" id="messageInput" placeholder="Scrivi un messaggio...">
+      <button id="sendBtn" onclick="sendMessage()">Invia</button>
+    </div>
+  </div>
+
+  <script type="module">
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAKMYg3K90aPNRUn65a3Hsk1nwnZVFv6Iw",
+      authDomain: "death-game-666c9.firebaseapp.com",
+      projectId: "death-game-666c9",
+      storageBucket: "death-game-666c9.firebasestorage.app",
+      messagingSenderId: "254600705396",
+      appId: "1:254600705396:web:5b2775ca03f2776c546821"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const loginDiv = document.getElementById('login');
+    const chatDiv = document.getElementById('chat');
+    const messagesDiv = document.getElementById('messages');
+    const nameInput = document.getElementById('name');
+    const codeInput = document.getElementById('code');
+    const errorP = document.getElementById('error');
+    const messageInput = document.getElementById('messageInput');
+    let userName = "";
+
+    function enterChat() {
+      const name = nameInput.value.trim();
+      const code = codeInput.value.trim();
+
+      if (code !== "0318") {
+        errorP.textContent = "Codice errato";
+        return;
+      }
+      if (name === "") {
+        errorP.textContent = "Inserisci il nome";
+        return;
+      }
+
+      userName = name;
+      loginDiv.style.display = "none";
+      chatDiv.style.display = "flex";
+      startChat();
+    }
+
+    function formatTime(date) {
+      const h = date.getHours().toString().padStart(2, '0');
+      const m = date.getMinutes().toString().padStart(2, '0');
+      return `${h}:${m}`;
+    }
+
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (text === "") return;
+      await addDoc(collection(db, "messages"), {
+        name: userName,
+        text: text,
+        timestamp: serverTimestamp()
+      });
+      messageInput.value = "";
+    }
+
+    function startChat() {
+      const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
+      onSnapshot(q, (snapshot) => {
+        messagesDiv.innerHTML = "";
+        snapshot.forEach(doc => {
+          const msg = doc.data();
+          const div = document.createElement('div');
+          div.classList.add('msg');
+
+          let timeText = "";
+          if (msg.timestamp && msg.timestamp.toDate) {
+            timeText = formatTime(msg.timestamp.toDate());
+          }
+
+          div.innerHTML = `
+            <div class="meta">${msg.name} | ${timeText}</div>
+            <div class="text">${msg.text}</div>
+          `;
+          messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+  </script>
+</body>
+</html>
