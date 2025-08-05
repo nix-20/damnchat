@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat</title>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #1a1a1a; color: #f0f0f0; display: flex; flex-direction: column; height: 100vh; }
+    #login, #chat { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; }
+    input, button { padding: 10px; margin: 5px; font-size: 16px; border-radius: 5px; border: none; }
+    input { width: 200px; }
+    button { background: #00aaff; color: white; cursor: pointer; }
+    button:hover { background: #0088cc; }
+    #messages { flex: 1; overflow-y: scroll; width: 100%; padding: 10px; box-sizing: border-box; }
+    .msg { margin: 5px 0; padding: 10px; border-radius: 8px; background: #2a2a2a; }
+    .msg .meta { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+    .msg .text { font-size: 16px; }
+    h2 { margin: 10px; }
+    #messageInput { width: 80%; }
+  </style>
+</head>
+<body>
+  <div id="login">
+    <h2>Entra nella chat</h2>
+    <input type="text" id="name" placeholder="Il tuo nome" />
+    <input type="password" id="code" placeholder="Codice segreto" />
+    <button onclick="enterChat()">Entra</button>
+    <p id="error" style="color:red;"></p>
+  </div>
+
+  <div id="chat">
+    <h2>Chat Segreta</h2>
+    <div id="messages"></div>
+    <div style="display: flex; width: 100%; padding: 10px; box-sizing: border-box;">
+      <input type="text" id="messageInput" placeholder="Scrivi un messaggio" />
+      <button onclick="sendMessage()">Invia</button>
+    </div>
+  </div>
+
+  <script type="module">
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAKMYg3K90aPNRUn65a3Hsk1nwnZVFv6Iw",
+      authDomain: "death-game-666c9.firebaseapp.com",
+      projectId: "death-game-666c9",
+      storageBucket: "death-game-666c9.firebasestorage.app",
+      messagingSenderId: "254600705396",
+      appId: "1:254600705396:web:5b2775ca03f2776c546821"
+    };
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const loginDiv = document.getElementById('login');
+    const chatDiv = document.getElementById('chat');
+    const messagesDiv = document.getElementById('messages');
+    const nameInput = document.getElementById('name');
+    const codeInput = document.getElementById('code');
+    const messageInput = document.getElementById('messageInput');
+    const errorP = document.getElementById('error');
+
+    let userName = "";
+
+    function enterChat() {
+      const code = codeInput.value.trim();
+      const name = nameInput.value.trim();
+      if (code !== "0318") {
+        errorP.textContent = "Codice errato";
+        return;
+      }
+      if (name === "") {
+        errorP.textContent = "Inserisci un nome";
+        return;
+      }
+      userName = name;
+      loginDiv.style.display = 'none';
+      chatDiv.style.display = 'flex';
+      loadMessages();
+    }
+
+    async function sendMessage() {
+      const text = messageInput.value.trim();
+      if (text === "") return;
+      await addDoc(collection(db, "messages"), {
+        name: userName,
+        text: text,
+        timestamp: serverTimestamp()
+      });
+      messageInput.value = "";
+    }
+
+    function formatTime(date) {
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+    }
+
+    function loadMessages() {
+      const q = query(collection(db, "messages"), orderBy("timestamp", "asc"));
+      onSnapshot(q, (snapshot) => {
+        messagesDiv.innerHTML = "";
+        snapshot.forEach(doc => {
+          const msg = doc.data();
+          const div = document.createElement('div');
+          div.classList.add('msg');
+
+          let timeText = "";
+          if (msg.timestamp && msg.timestamp.toDate) {
+            const date = msg.timestamp.toDate();
+            timeText = formatTime(date);
+          }
+
+          div.innerHTML = `
+            <div class="meta">${msg.name} | ${timeText}</div>
+            <div class="text">${msg.text}</div>
+          `;
+          messagesDiv.appendChild(div);
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      });
+    }
+
+    // Mostra login iniziale
+    loginDiv.style.display = 'flex';
+  </script>
+</body>
+</html>
